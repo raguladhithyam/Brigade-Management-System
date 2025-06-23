@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, FileSpreadsheet, Users, CheckCircle, Download } from 'lucide-react';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';

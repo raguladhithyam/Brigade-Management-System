@@ -232,5 +232,3 @@ For support and questions:
 - Firebase integration
 
 ---
-
-**Built with ❤️ for efficient brigade management**

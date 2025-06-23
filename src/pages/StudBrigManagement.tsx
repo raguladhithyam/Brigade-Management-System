@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Shield, Plus, UserPlus, CheckCircle, AlertCircle } from 'lucide-react';
+import { Users, Shield, Plus, UserPlus, AlertCircle } from 'lucide-react';
 import { collection, doc, setDoc, getDocs, query, orderBy } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 import Layout from '../components/Layout';

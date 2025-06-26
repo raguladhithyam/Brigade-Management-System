@@ -65,7 +65,15 @@ const DataManagement: React.FC = () => {
       return;
     }
 
-    if (!window.confirm('This will permanently delete all students and brigades. Type "DELETE" to confirm.')) {
+    // Proper text input confirmation
+    const confirmationText = window.prompt(
+      'This will permanently delete all students and brigades.\n\nType "DELETE" (in capital letters) to confirm:'
+    );
+
+    if (confirmationText !== 'DELETE') {
+      if (confirmationText !== null) { // User didn't cancel
+        toast.error('Confirmation text did not match. Operation cancelled.');
+      }
       return;
     }
 

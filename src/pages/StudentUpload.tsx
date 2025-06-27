@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileSpreadsheet, Users, CheckCircle, Download, Check, X, Database } from 'lucide-react';
+import { Upload, FileSpreadsheet, Users, CheckCircle, Download, Check, Database } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 import Layout from '../components/Layout';

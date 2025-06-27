@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileSpreadsheet, Users, CheckCircle, Download, Check } from 'lucide-react';
+import { Upload, FileSpreadsheet, Users, CheckCircle, Download, Check, X, Database } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 import Layout from '../components/Layout';
@@ -21,6 +21,7 @@ const StudentUpload: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [uploadComplete, setUploadComplete] = useState(false);
   const [uploadedStudents, setUploadedStudents] = useState<Student[]>([]);
+  const [currentUploadingStudent, setCurrentUploadingStudent] = useState<Student | null>(null);
   const { db } = useFirebase();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,6 +35,7 @@ const StudentUpload: React.FC = () => {
       setUploadedCount(0);
       setUploadComplete(false);
       setUploadedStudents([]);
+      setCurrentUploadingStudent(null);
     }
   };
 
@@ -90,6 +92,7 @@ const StudentUpload: React.FC = () => {
     setUploadComplete(false);
     setUploadedCount(0);
     setUploadedStudents([]);
+    setCurrentUploadingStudent(null);
     
     let successCount = 0;
     const successfulUploads: Student[] = [];
@@ -119,20 +122,24 @@ const StudentUpload: React.FC = () => {
 
             if (student.stdroll) {
               try {
+                // Set current uploading student
+                setCurrentUploadingStudent(student);
+                
                 await setDoc(doc(db, 'students', student.stdroll), student);
                 successCount++;
                 successfulUploads.push(student);
                 setUploadedCount(successCount);
                 setUploadedStudents([...successfulUploads]);
                 
-                // Small delay to show progress (optional - remove for faster upload)
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Delay to show the upload process
+                await new Promise(resolve => setTimeout(resolve, 800));
               } catch (error) {
                 console.error(`Error uploading student ${student.stdroll}:`, error);
               }
             }
           }
           
+          setCurrentUploadingStudent(null);
           setUploadComplete(true);
           toast.success(`Successfully uploaded ${successCount} students!`);
           
@@ -155,14 +162,136 @@ const StudentUpload: React.FC = () => {
       toast.error('Failed to upload students');
     } finally {
       setUploading(false);
+      setCurrentUploadingStudent(null);
     }
   };
 
   const progressPercentage = totalCount > 0 ? (uploadedCount / totalCount) * 100 : 0;
 
+  // Upload Modal Component
+  const UploadModal = () => (
+    <AnimatePresence>
+      {uploading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          style={{ backdropFilter: 'blur(4px)' }}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8"
+          >
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Database className="w-10 h-10 text-blue-600 animate-pulse" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Uploading Students</h2>
+              <p className="text-gray-600">Please wait while we upload your data...</p>
+            </div>
+
+            {/* Current Upload Info */}
+            {currentUploadingStudent && (
+              <motion.div
+                key={currentUploadingStudent.stdroll}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6"
+              >
+                <div className="flex items-center space-x-3 mb-3">
+                  <LoadingSpinner size="sm" />
+                  <span className="text-sm font-medium text-blue-800">Currently uploading:</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Roll Number:</span>
+                    <span className="text-sm font-semibold text-gray-900">{currentUploadingStudent.stdroll}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Name:</span>
+                    <span className="text-sm font-semibold text-gray-900">{currentUploadingStudent.stdname}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Brigade:</span>
+                    <span className="text-sm font-semibold text-gray-900">{currentUploadingStudent.stdbg}</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Progress Bar */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Progress</span>
+                <span className="text-sm font-bold text-gray-900">
+                  {uploadedCount}/{totalCount} ({Math.round(progressPercentage)}%)
+                </span>
+              </div>
+              
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <motion.div 
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercentage}%` }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                />
+              </div>
+            </div>
+
+            {/* Recently Uploaded Students */}
+            {uploadedStudents.length > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-40 overflow-y-auto">
+                <h4 className="text-sm font-medium text-green-800 mb-2 flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Recently Uploaded ({uploadedStudents.length})
+                </h4>
+                <div className="space-y-1">
+                  {uploadedStudents.slice(-5).reverse().map((student, index) => (
+                    <motion.div
+                      key={`${student.stdroll}-${index}`}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-xs text-green-700 flex items-center space-x-2 py-1"
+                    >
+                      <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                      <span className="truncate">{student.stdroll} - {student.stdname}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Warning Message */}
+            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start space-x-2">
+                <div className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5">
+                  ⚠️
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-yellow-800">Please don't close this window</p>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    Upload in progress. Closing may interrupt the process.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
     <Layout>
-      <div className="space-y-6">
+      {/* Upload Modal */}
+      <UploadModal />
+      
+      {/* Main Content - Disabled when uploading */}
+      <div className={`space-y-6 ${uploading ? 'pointer-events-none opacity-50' : ''}`}>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -288,7 +417,7 @@ const StudentUpload: React.FC = () => {
                 {uploading ? (
                   <>
                     <LoadingSpinner size="sm" />
-                    <span>Uploading... ({uploadedCount}/{totalCount})</span>
+                    <span>Processing...</span>
                   </>
                 ) : uploadComplete ? (
                   <>
@@ -302,60 +431,6 @@ const StudentUpload: React.FC = () => {
                   </>
                 )}
               </button>
-
-              {/* Enhanced Progress Indicator */}
-              {uploading && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-blue-800">Processing students...</span>
-                    <span className="text-sm font-bold text-blue-900">
-                      {uploadedCount}/{totalCount} ({Math.round(progressPercentage)}%)
-                    </span>
-                  </div>
-                  
-                  <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
-                    <motion.div 
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300 ease-out"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressPercentage}%` }}
-                    />
-                  </div>
-                  
-                  {uploadedCount > 0 && (
-                    <div className="text-xs text-blue-700">
-                      Last uploaded: {uploadedStudents[uploadedStudents.length - 1]?.stdname || 'Processing...'}
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {/* Real-time Upload Status */}
-              {uploading && uploadedStudents.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-white border border-gray-200 rounded-lg p-3 max-h-32 overflow-y-auto"
-                >
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Recently Uploaded:</h4>
-                  <div className="space-y-1">
-                    {uploadedStudents.slice(-5).reverse().map((student, index) => (
-                      <motion.div
-                        key={`${student.stdroll}-${index}`}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="text-xs text-gray-600 flex items-center space-x-2"
-                      >
-                        <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
-                        <span>{student.stdroll} - {student.stdname}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
             </div>
           </motion.div>
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Upload, FileSpreadsheet, Shield, CheckCircle, Download } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, FileSpreadsheet, Shield, CheckCircle, Download, Check } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 import Layout from '../components/Layout';
@@ -19,6 +19,9 @@ const BrigadeUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedCount, setUploadedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [uploadComplete, setUploadComplete] = useState(false);
+  const [uploadedBrigades, setUploadedBrigades] = useState<Brigade[]>([]);
   const { db } = useFirebase();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,6 +33,8 @@ const BrigadeUpload: React.FC = () => {
       }
       setFile(selectedFile);
       setUploadedCount(0);
+      setUploadComplete(false);
+      setUploadedBrigades([]);
     }
   };
 
@@ -57,6 +62,18 @@ const BrigadeUpload: React.FC = () => {
         { width: 25 }  // Venue Location
       ];
 
+      // Style headers (make them bold)
+      const headerStyle = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: "E8F5E8" } }
+      };
+
+      // Apply header styling
+      worksheet['A1'].s = headerStyle;
+      worksheet['B1'].s = headerStyle;
+      worksheet['C1'].s = headerStyle;
+      worksheet['D1'].s = headerStyle;
+
       // Add worksheet to workbook
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Brigade Template');
 
@@ -78,7 +95,12 @@ const BrigadeUpload: React.FC = () => {
     }
 
     setUploading(true);
+    setUploadComplete(false);
+    setUploadedCount(0);
+    setUploadedBrigades([]);
+    
     let successCount = 0;
+    const successfulUploads: Brigade[] = [];
 
     try {
       const reader = new FileReader();
@@ -89,9 +111,14 @@ const BrigadeUpload: React.FC = () => {
           const worksheet = workbook.Sheets[workbook.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-          const uploadPromises = rows.map(async (row, index) => {
-            if (index === 0 || !row[0]) return; // Skip header or empty rows
+          // Filter out header and empty rows to get actual count
+          const validRows = rows.filter((row, index) => index !== 0 && row[0]);
+          setTotalCount(validRows.length);
 
+          // Process each brigade one by one for better progress tracking
+          for (let i = 0; i < validRows.length; i++) {
+            const row = validRows[i];
+            
             const brigade: Brigade = {
               bnameno: String(row[0]).trim(),
               blname: String(row[1] || '').trim(),
@@ -99,24 +126,32 @@ const BrigadeUpload: React.FC = () => {
               venue: String(row[3] || '').trim(),
             };
 
-            if (!brigade.bnameno) return;
-
-            try {
-              await setDoc(doc(db, 'brigades', brigade.bnameno), brigade);
-              successCount++;
-              setUploadedCount(successCount);
-            } catch (error) {
-              console.error(`Error uploading brigade ${brigade.bnameno}:`, error);
+            if (brigade.bnameno) {
+              try {
+                await setDoc(doc(db, 'brigades', brigade.bnameno), brigade);
+                successCount++;
+                successfulUploads.push(brigade);
+                setUploadedCount(successCount);
+                setUploadedBrigades([...successfulUploads]);
+                
+                // Small delay to show progress (optional - remove for faster upload)
+                await new Promise(resolve => setTimeout(resolve, 100));
+              } catch (error) {
+                console.error(`Error uploading brigade ${brigade.bnameno}:`, error);
+              }
             }
-          });
-
-          await Promise.all(uploadPromises);
+          }
           
+          setUploadComplete(true);
           toast.success(`Successfully uploaded ${successCount} brigades!`);
-          setFile(null);
-          // Reset file input
-          const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-          if (fileInput) fileInput.value = '';
+          
+          // Reset file input after a delay to show success state
+          setTimeout(() => {
+            setFile(null);
+            const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
+          }, 3000);
+          
         } catch (error) {
           console.error('Error processing file:', error);
           toast.error('Error processing the Excel file');
@@ -132,6 +167,8 @@ const BrigadeUpload: React.FC = () => {
     }
   };
 
+  const progressPercentage = totalCount > 0 ? (uploadedCount / totalCount) * 100 : 0;
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -143,6 +180,49 @@ const BrigadeUpload: React.FC = () => {
           <h1 className="text-3xl font-bold font-montserrat text-gray-900">Upload Brigades</h1>
           <p className="text-gray-600 mt-2">Upload brigade information from Excel files</p>
         </motion.div>
+
+        {/* Success Message */}
+        <AnimatePresence>
+          {uploadComplete && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -20 }}
+              className="bg-green-50 border border-green-200 rounded-lg p-6"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <Check className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-green-800">Upload Successful!</h3>
+                  <p className="text-green-700">
+                    {uploadedCount} out of {totalCount} brigades uploaded successfully
+                  </p>
+                </div>
+              </div>
+              
+              {uploadedBrigades.length > 0 && (
+                <div className="bg-white rounded-lg p-4 max-h-40 overflow-y-auto">
+                  <h4 className="font-medium text-gray-900 mb-2">Uploaded Brigades:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {uploadedBrigades.slice(0, 10).map((brigade, index) => (
+                      <div key={index} className="text-sm text-gray-600 flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span>{brigade.bnameno} - {brigade.blname}</span>
+                      </div>
+                    ))}
+                    {uploadedBrigades.length > 10 && (
+                      <div className="text-sm text-gray-500 col-span-2">
+                        ... and {uploadedBrigades.length - 10} more brigades
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Upload Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -172,6 +252,7 @@ const BrigadeUpload: React.FC = () => {
                   <button
                     onClick={downloadTemplate}
                     className="btn-secondary flex items-center space-x-2 px-4 py-2"
+                    disabled={uploading}
                   >
                     <Download className="w-4 h-4" />
                     <span>Download Template</span>
@@ -193,7 +274,7 @@ const BrigadeUpload: React.FC = () => {
                 />
               </div>
 
-              {file && (
+              {file && !uploading && !uploadComplete && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-5 h-5 text-green-600" />
@@ -206,13 +287,22 @@ const BrigadeUpload: React.FC = () => {
 
               <button
                 onClick={handleUpload}
-                disabled={!file || uploading}
-                className="w-full btn-primary flex items-center justify-center space-x-2 py-3"
+                disabled={!file || uploading || uploadComplete}
+                className={`w-full flex items-center justify-center space-x-2 py-3 rounded-lg transition-all duration-200 ${
+                  !file || uploading || uploadComplete
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'btn-primary hover:bg-green-700'
+                }`}
               >
                 {uploading ? (
                   <>
                     <LoadingSpinner size="sm" />
-                    <span>Uploading... ({uploadedCount} processed)</span>
+                    <span>Uploading... ({uploadedCount}/{totalCount})</span>
+                  </>
+                ) : uploadComplete ? (
+                  <>
+                    <Check className="w-5 h-5" />
+                    <span>Upload Complete</span>
                   </>
                 ) : (
                   <>
@@ -221,6 +311,61 @@ const BrigadeUpload: React.FC = () => {
                   </>
                 )}
               </button>
+
+              {/* Enhanced Progress Indicator */}
+              {uploading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-green-800">Processing brigades...</span>
+                    <span className="text-sm font-bold text-green-900">
+                      {uploadedCount}/{totalCount} ({Math.round(progressPercentage)}%)
+                    </span>
+                  </div>
+                  
+                  <div className="w-full bg-green-200 rounded-full h-3 overflow-hidden">
+                    <motion.div 
+                      className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-300 ease-out"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progressPercentage}%` }}
+                    />
+                  </div>
+                  
+                  {uploadedCount > 0 && (
+                    <div className="text-xs text-green-700">
+                      Last uploaded: {uploadedBrigades[uploadedBrigades.length - 1]?.blname || 'Processing...'}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Real-time Upload Status */}
+              {uploading && uploadedBrigades.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-white border border-gray-200 rounded-lg p-3 max-h-32 overflow-y-auto"
+                >
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Recently Uploaded:</h4>
+                  <div className="space-y-1">
+                    {uploadedBrigades.slice(-5).reverse().map((brigade, index) => (
+                      <motion.div
+                        key={`${brigade.bnameno}-${index}`}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="text-xs text-gray-600 flex items-center space-x-2"
+                      >
+                        <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                        <span>{brigade.bnameno} - {brigade.blname}</span>
+                        <span className="text-gray-500">({brigade.venue})</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </div>
           </motion.div>
 
@@ -279,6 +424,7 @@ const BrigadeUpload: React.FC = () => {
                   <li>• All fields are required</li>
                   <li>• Phone numbers should be 10 digits</li>
                   <li>• File must be in .xlsx format</li>
+                  <li>• Use the template for best results</li>
                 </ul>
               </div>
 
@@ -286,7 +432,7 @@ const BrigadeUpload: React.FC = () => {
                 <h3 className="font-medium text-green-800 mb-2">Quick Start:</h3>
                 <ol className="text-sm text-green-700 space-y-1">
                   <li>1. Download the template above</li>
-                  <li>2. Fill in your student data</li>
+                  <li>2. Fill in your brigade data</li>
                   <li>3. Save and upload the file</li>
                 </ol>
               </div>

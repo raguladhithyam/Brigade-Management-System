@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Upload, FileSpreadsheet, Users, CheckCircle, Download } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, FileSpreadsheet, Users, CheckCircle, Download, Check } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 import Layout from '../components/Layout';
@@ -18,6 +18,9 @@ const StudentUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedCount, setUploadedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [uploadComplete, setUploadComplete] = useState(false);
+  const [uploadedStudents, setUploadedStudents] = useState<Student[]>([]);
   const { db } = useFirebase();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,6 +32,8 @@ const StudentUpload: React.FC = () => {
       }
       setFile(selectedFile);
       setUploadedCount(0);
+      setUploadComplete(false);
+      setUploadedStudents([]);
     }
   };
 
@@ -82,7 +87,12 @@ const StudentUpload: React.FC = () => {
     }
 
     setUploading(true);
+    setUploadComplete(false);
+    setUploadedCount(0);
+    setUploadedStudents([]);
+    
     let successCount = 0;
+    const successfulUploads: Student[] = [];
 
     try {
       const reader = new FileReader();
@@ -93,33 +103,46 @@ const StudentUpload: React.FC = () => {
           const worksheet = workbook.Sheets[workbook.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-          const uploadPromises = rows.map(async (row, index) => {
-            if (index === 0 || !row[0]) return; // Skip header or empty rows
+          // Filter out header and empty rows to get actual count
+          const validRows = rows.filter((row, index) => index !== 0 && row[0]);
+          setTotalCount(validRows.length);
 
+          // Process each student one by one for better progress tracking
+          for (let i = 0; i < validRows.length; i++) {
+            const row = validRows[i];
+            
             const student: Student = {
               stdroll: String(row[0]).trim(),
               stdname: String(row[1] || '').trim(),
               stdbg: String(row[2] || '').trim(),
             };
 
-            if (!student.stdroll) return;
-
-            try {
-              await setDoc(doc(db, 'students', student.stdroll), student);
-              successCount++;
-              setUploadedCount(successCount);
-            } catch (error) {
-              console.error(`Error uploading student ${student.stdroll}:`, error);
+            if (student.stdroll) {
+              try {
+                await setDoc(doc(db, 'students', student.stdroll), student);
+                successCount++;
+                successfulUploads.push(student);
+                setUploadedCount(successCount);
+                setUploadedStudents([...successfulUploads]);
+                
+                // Small delay to show progress (optional - remove for faster upload)
+                await new Promise(resolve => setTimeout(resolve, 100));
+              } catch (error) {
+                console.error(`Error uploading student ${student.stdroll}:`, error);
+              }
             }
-          });
-
-          await Promise.all(uploadPromises);
+          }
           
+          setUploadComplete(true);
           toast.success(`Successfully uploaded ${successCount} students!`);
-          setFile(null);
-          // Reset file input
-          const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-          if (fileInput) fileInput.value = '';
+          
+          // Reset file input after a delay to show success state
+          setTimeout(() => {
+            setFile(null);
+            const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
+          }, 3000);
+          
         } catch (error) {
           console.error('Error processing file:', error);
           toast.error('Error processing the Excel file');
@@ -135,6 +158,8 @@ const StudentUpload: React.FC = () => {
     }
   };
 
+  const progressPercentage = totalCount > 0 ? (uploadedCount / totalCount) * 100 : 0;
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -146,6 +171,49 @@ const StudentUpload: React.FC = () => {
           <h1 className="text-3xl font-bold font-montserrat text-gray-900">Upload Students</h1>
           <p className="text-gray-600 mt-2">Upload student data from Excel files</p>
         </motion.div>
+
+        {/* Success Message */}
+        <AnimatePresence>
+          {uploadComplete && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -20 }}
+              className="bg-green-50 border border-green-200 rounded-lg p-6"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <Check className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-green-800">Upload Successful!</h3>
+                  <p className="text-green-700">
+                    {uploadedCount} out of {totalCount} students uploaded successfully
+                  </p>
+                </div>
+              </div>
+              
+              {uploadedStudents.length > 0 && (
+                <div className="bg-white rounded-lg p-4 max-h-40 overflow-y-auto">
+                  <h4 className="font-medium text-gray-900 mb-2">Uploaded Students:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {uploadedStudents.slice(0, 10).map((student, index) => (
+                      <div key={index} className="text-sm text-gray-600 flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span>{student.stdroll} - {student.stdname}</span>
+                      </div>
+                    ))}
+                    {uploadedStudents.length > 10 && (
+                      <div className="text-sm text-gray-500 col-span-2">
+                        ... and {uploadedStudents.length - 10} more students
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Upload Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -197,7 +265,7 @@ const StudentUpload: React.FC = () => {
                 />
               </div>
 
-              {file && (
+              {file && !uploading && !uploadComplete && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-5 h-5 text-green-600" />
@@ -210,9 +278,9 @@ const StudentUpload: React.FC = () => {
 
               <button
                 onClick={handleUpload}
-                disabled={!file || uploading}
+                disabled={!file || uploading || uploadComplete}
                 className={`w-full flex items-center justify-center space-x-2 py-3 rounded-lg transition-all duration-200 ${
-                  !file || uploading
+                  !file || uploading || uploadComplete
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'btn-primary hover:bg-blue-700'
                 }`}
@@ -220,7 +288,12 @@ const StudentUpload: React.FC = () => {
                 {uploading ? (
                   <>
                     <LoadingSpinner size="sm" />
-                    <span>Uploading... ({uploadedCount} processed)</span>
+                    <span>Uploading... ({uploadedCount}/{totalCount})</span>
+                  </>
+                ) : uploadComplete ? (
+                  <>
+                    <Check className="w-5 h-5" />
+                    <span>Upload Complete</span>
                   </>
                 ) : (
                   <>
@@ -230,20 +303,58 @@ const StudentUpload: React.FC = () => {
                 )}
               </button>
 
-              {/* Upload Progress Indicator */}
+              {/* Enhanced Progress Indicator */}
               {uploading && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3"
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-blue-700">Processing students...</span>
-                    <span className="text-sm font-medium text-blue-800">{uploadedCount} uploaded</span>
+                    <span className="text-sm font-medium text-blue-800">Processing students...</span>
+                    <span className="text-sm font-bold text-blue-900">
+                      {uploadedCount}/{totalCount} ({Math.round(progressPercentage)}%)
+                    </span>
                   </div>
-                  <div className="w-full bg-blue-200 rounded-full h-2 mt-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: '100%' }}
-                    ></div>
+                  
+                  <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
+                    <motion.div 
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300 ease-out"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progressPercentage}%` }}
+                    />
                   </div>
-                </div>
+                  
+                  {uploadedCount > 0 && (
+                    <div className="text-xs text-blue-700">
+                      Last uploaded: {uploadedStudents[uploadedStudents.length - 1]?.stdname || 'Processing...'}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Real-time Upload Status */}
+              {uploading && uploadedStudents.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-white border border-gray-200 rounded-lg p-3 max-h-32 overflow-y-auto"
+                >
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Recently Uploaded:</h4>
+                  <div className="space-y-1">
+                    {uploadedStudents.slice(-5).reverse().map((student, index) => (
+                      <motion.div
+                        key={`${student.stdroll}-${index}`}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="text-xs text-gray-600 flex items-center space-x-2"
+                      >
+                        <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                        <span>{student.stdroll} - {student.stdname}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
               )}
             </div>
           </motion.div>

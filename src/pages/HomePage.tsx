@@ -100,9 +100,9 @@ const HomePage: React.FC = () => {
           className="text-center mb-12"
         >
           <div className="flex justify-center mb-6">
-            <div className="w-24 h-24 bg-primary-600 rounded-full flex items-center justify-center">
-              <Users className="w-12 h-12 text-white" />
-            </div>
+              <div className="w-24 h-24 bg-primary-600 rounded-full flex items-center justify-center overflow-hidden">
+                <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
+              </div>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold font-montserrat text-gray-900 mb-4">
             Brigade Venue Finder

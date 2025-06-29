@@ -146,7 +146,7 @@ const HomePage: React.FC = () => {
                   <div className="bg-white rounded-md p-3 mb-3">
                     <div className="flex items-center justify-center space-x-2 mb-1">
                       <MapPin className="w-4 h-4 text-accent-600" />
-                      <span className="font-medium text-gray-900">Sarabai Kalam Theatre</span>
+                      <span className="font-medium text-gray-900">Sarabai Kalam Theatre ( SKT )</span>
                     </div>
                     <div className="flex items-center justify-center space-x-2">
                       <Clock className="w-4 h-4 text-accent-600" />
@@ -187,7 +187,7 @@ const HomePage: React.FC = () => {
             Brigade Venue Finder
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Enter your temporary roll number to find your brigade details, venue location, and brigade lead contact information.
+            Enter your roll number to find your brigade details, venue location, and brigade lead contact information.
           </p>
         </motion.div>
 
@@ -202,7 +202,7 @@ const HomePage: React.FC = () => {
             <form onSubmit={handleSearch} className="space-y-6">
               <div>
                 <label htmlFor="rollNumber" className="block text-sm font-medium text-gray-700 mb-2">
-                  Temporary Roll Number
+                  Roll Number
                 </label>
                 <div className="relative">
                   <input
@@ -309,11 +309,11 @@ const HomePage: React.FC = () => {
                     For venue clarification, please contact:
                   </p>
                   <a
-                    href="tel:+9104222661100"
+                    href={`tel:+91${result.brigade.blno}`}
                     className="inline-flex items-center space-x-2 text-accent-600 hover:text-accent-700 font-medium"
                   >
                     <Phone className="w-4 h-4" />
-                    <span>04222661100</span>
+                    <span>{result.brigade.blno}</span>
                     <ExternalLink className="w-4 h-4" />
                   </a>
                 </div>

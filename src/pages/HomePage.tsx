@@ -42,10 +42,13 @@ const HomePage: React.FC = () => {
     setResult(null);
 
     try {
+      // Convert roll number to uppercase before searching
+      const searchRollNumber = rollNumber.trim().toUpperCase();
+      
       // Search for student
       const studentQuery = query(
         collection(db, 'students'),
-        where('stdroll', '==', rollNumber.trim())
+        where('stdroll', '==', searchRollNumber)
       );
       const studentSnapshot = await getDocs(studentQuery);
 
@@ -210,7 +213,7 @@ const HomePage: React.FC = () => {
                     id="rollNumber"
                     value={rollNumber}
                     onChange={(e) => setRollNumber(e.target.value)}
-                    placeholder="Enter your 5-digit roll number"
+                    placeholder="Enter your roll number (e.g., 25bba001)"
                     className="input-field pl-10"
                     disabled={loading}
                   />

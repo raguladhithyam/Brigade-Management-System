@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Search, Users, MapPin, Phone, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Users, MapPin, Phone, ExternalLink, X, Clock, Calendar } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 import toast from 'react-hot-toast';
@@ -22,11 +22,13 @@ interface Brigade {
 const HomePage: React.FC = () => {
   const [rollNumber, setRollNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPopup, setShowPopup] = useState(true);
   const [result, setResult] = useState<{
     student: Student;
     brigade: Brigade;
   } | null>(null);
   const { db } = useFirebase();
+  const resultsRef = React.useRef<HTMLDivElement>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +84,14 @@ const HomePage: React.FC = () => {
       });
 
       toast.success('Brigade details found!');
+      
+      // Scroll to results after a brief delay to allow state update
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('An error occurred while searching. Please try again.');
@@ -92,6 +102,75 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen gradient-bg">
+      {/* Session Announcement Popup */}
+      <AnimatePresence>
+        {showPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative"
+            >
+              <button
+                onClick={() => setShowPopup(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-8 h-8 text-primary-600" />
+                </div>
+                
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  Important Announcement
+                </h3>
+                
+                <div className="bg-primary-50 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <Clock className="w-5 h-5 text-primary-600" />
+                    <span className="font-semibold text-primary-700">Today (30/6)</span>
+                  </div>
+                  
+                  <p className="text-gray-700 text-sm mb-3">
+                    <strong>First Session Location:</strong>
+                  </p>
+                  
+                  <div className="bg-white rounded-md p-3 mb-3">
+                    <div className="flex items-center justify-center space-x-2 mb-1">
+                      <MapPin className="w-4 h-4 text-accent-600" />
+                      <span className="font-medium text-gray-900">Sarabai Kalam Theatre</span>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2">
+                      <Clock className="w-4 h-4 text-accent-600" />
+                      <span className="font-medium text-gray-900">8:30 AM onwards</span>
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600">
+                    After the session, you may proceed to your respective brigade venues.
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => setShowPopup(false)}
+                  className="w-full btn-primary py-3"
+                >
+                  Got it
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <motion.div
@@ -100,9 +179,9 @@ const HomePage: React.FC = () => {
           className="text-center mb-12"
         >
           <div className="flex justify-center mb-6">
-              <div className="w-24 h-24 bg-primary-600 rounded-full flex items-center justify-center overflow-hidden">
-                <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
-              </div>
+            <div className="w-24 h-24 bg-primary-600 rounded-full flex items-center justify-center">
+              <Users className="w-12 h-12 text-white" />
+            </div>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold font-montserrat text-gray-900 mb-4">
             Brigade Venue Finder
@@ -159,6 +238,7 @@ const HomePage: React.FC = () => {
         {/* Results */}
         {result && (
           <motion.div
+            ref={resultsRef}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="max-w-2xl mx-auto"

@@ -139,11 +139,11 @@ const HomePage: React.FC = () => {
                 <div className="bg-primary-50 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-center space-x-2 mb-2">
                     <Clock className="w-5 h-5 text-primary-600" />
-                    <span className="font-semibold text-primary-700">Today (30/6)</span>
+                    <span className="font-semibold text-primary-700">Today (30/8)</span>
                   </div>
                   
                   <p className="text-gray-700 text-sm mb-3">
-                    <strong>First Session Location:</strong>
+                    <strong>Swagatham Location:</strong>
                   </p>
                   
                   <div className="bg-white rounded-md p-3 mb-3">
@@ -153,12 +153,12 @@ const HomePage: React.FC = () => {
                     </div>
                     <div className="flex items-center justify-center space-x-2">
                       <Clock className="w-4 h-4 text-accent-600" />
-                      <span className="font-medium text-gray-900">8:30 AM onwards</span>
+                      <span className="font-medium text-gray-900">10:30 AM onwards</span>
                     </div>
                   </div>
                   
                   <p className="text-sm text-gray-600">
-                    After the session, you may proceed to your respective brigade venues.
+                    
                   </p>
                 </div>
                 
@@ -213,7 +213,7 @@ const HomePage: React.FC = () => {
                     id="rollNumber"
                     value={rollNumber}
                     onChange={(e) => setRollNumber(e.target.value)}
-                    placeholder="Enter your roll number (e.g., 25bba001)"
+                    placeholder="Enter your roll number (e.g., 15394)"
                     className="input-field pl-10"
                     disabled={loading}
                   />

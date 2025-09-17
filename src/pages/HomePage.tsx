@@ -104,76 +104,7 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-bg">
-      {/* Session Announcement Popup */}
-      <AnimatePresence>
-        {showPopup && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative"
-            >
-              <button
-                onClick={() => setShowPopup(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="w-8 h-8 text-primary-600" />
-                </div>
-                
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
-                  Important Announcement
-                </h3>
-                
-                <div className="bg-primary-50 rounded-lg p-4 mb-4">
-                  <div className="flex items-center justify-center space-x-2 mb-2">
-                    <Clock className="w-5 h-5 text-primary-600" />
-                    <span className="font-semibold text-primary-700">Today (30/8)</span>
-                  </div>
-                  
-                  <p className="text-gray-700 text-sm mb-3">
-                    <strong>Swagatham Location:</strong>
-                  </p>
-                  
-                  <div className="bg-white rounded-md p-3 mb-3">
-                    <div className="flex items-center justify-center space-x-2 mb-1">
-                      <MapPin className="w-4 h-4 text-accent-600" />
-                      <span className="font-medium text-gray-900">Sarabai Kalam Theatre ( SKT )</span>
-                    </div>
-                    <div className="flex items-center justify-center space-x-2">
-                      <Clock className="w-4 h-4 text-accent-600" />
-                      <span className="font-medium text-gray-900">10:30 AM onwards</span>
-                    </div>
-                  </div>
-                  
-                  <p className="text-sm text-gray-600">
-                    
-                  </p>
-                </div>
-                
-                <button
-                  onClick={() => setShowPopup(false)}
-                  className="w-full btn-primary py-3"
-                >
-                  Got it
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+    
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <motion.div

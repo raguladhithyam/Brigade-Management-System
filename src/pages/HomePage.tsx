@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, MapPin, Shield } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { PopupDialog } from '@/components/PopupDialog';
+import { DEFAULT_POPUP, HomePopup, loadPopup, popupHasContent } from '@/lib/popup';
 import LoadingSpinner from '../components/LoadingSpinner';
+
+const POPUP_DISMISS_KEY = 'ignite:homePopupDismissedAt';
 
 interface Student {
   stdroll: string;
@@ -27,8 +31,31 @@ const HomePage: React.FC = () => {
   const [rollNumber, setRollNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ student: Student; brigade: Brigade } | null>(null);
+  const [popup, setPopup] = useState<HomePopup>(DEFAULT_POPUP);
+  const [popupOpen, setPopupOpen] = useState(false);
   const { db } = useFirebase();
   const resultsRef = React.useRef<HTMLDivElement>(null);
+
+  // Load the admin-managed home popup and show it once per content version per browser.
+  useEffect(() => {
+    (async () => {
+      try {
+        const config = await loadPopup();
+        setPopup(config);
+        if (config.enabled && popupHasContent(config)) {
+          const dismissedAt = Number(localStorage.getItem(POPUP_DISMISS_KEY) || 0);
+          if (dismissedAt !== config.updatedAt) setPopupOpen(true);
+        }
+      } catch (err) {
+        console.error('Failed to load home popup:', err);
+      }
+    })();
+  }, []);
+
+  const handlePopupOpenChange = (open: boolean) => {
+    setPopupOpen(open);
+    if (!open) localStorage.setItem(POPUP_DISMISS_KEY, String(popup.updatedAt));
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,6 +223,8 @@ const HomePage: React.FC = () => {
           Having trouble? Contact your brigade lead for venue clarification.
         </p>
       </div>
+
+      <PopupDialog popup={popup} open={popupOpen} onOpenChange={handlePopupOpenChange} />
     </div>
   );
 };

@@ -10,6 +10,7 @@ import BrigadesPage from './pages/BrigadesPage';
 import StudentUpload from './pages/StudentUpload';
 import BrigadeUpload from './pages/BrigadeUpload';
 import UserManagement from './pages/UserManagement';
+import PopupManagement from './pages/PopupManagement';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -73,6 +74,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <UserManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/popup"
+                element={
+                  <ProtectedRoute>
+                    <PopupManagement />
                   </ProtectedRoute>
                 }
               />

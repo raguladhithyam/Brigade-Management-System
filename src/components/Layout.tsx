@@ -8,6 +8,7 @@ import {
   LogOut,
   Menu,
   UserCog,
+  Megaphone,
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,6 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Students', href: '/admin/students', icon: Users },
     { name: 'Brigades', href: '/admin/brigades', icon: Shield },
+    { name: 'Home Popup', href: '/admin/popup', icon: Megaphone },
     { name: 'Users', href: '/admin/users', icon: UserCog },
   ];
 

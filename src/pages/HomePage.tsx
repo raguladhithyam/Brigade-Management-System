@@ -12,8 +12,6 @@ import { PopupDialog } from '@/components/PopupDialog';
 import { DEFAULT_POPUP, HomePopup, loadPopup, popupHasContent } from '@/lib/popup';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-const POPUP_DISMISS_KEY = 'ignite:homePopupDismissedAt';
-
 interface Student {
   stdroll: string;
   stdname: string;
@@ -36,26 +34,18 @@ const HomePage: React.FC = () => {
   const { db } = useFirebase();
   const resultsRef = React.useRef<HTMLDivElement>(null);
 
-  // Load the admin-managed home popup and show it once per content version per browser.
+  // Load the admin-managed home popup and show it on every visit while enabled.
   useEffect(() => {
     (async () => {
       try {
         const config = await loadPopup();
         setPopup(config);
-        if (config.enabled && popupHasContent(config)) {
-          const dismissedAt = Number(localStorage.getItem(POPUP_DISMISS_KEY) || 0);
-          if (dismissedAt !== config.updatedAt) setPopupOpen(true);
-        }
+        if (config.enabled && popupHasContent(config)) setPopupOpen(true);
       } catch (err) {
         console.error('Failed to load home popup:', err);
       }
     })();
   }, []);
-
-  const handlePopupOpenChange = (open: boolean) => {
-    setPopupOpen(open);
-    if (!open) localStorage.setItem(POPUP_DISMISS_KEY, String(popup.updatedAt));
-  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,7 +214,7 @@ const HomePage: React.FC = () => {
         </p>
       </div>
 
-      <PopupDialog popup={popup} open={popupOpen} onOpenChange={handlePopupOpenChange} />
+      <PopupDialog popup={popup} open={popupOpen} onOpenChange={setPopupOpen} />
     </div>
   );
 };

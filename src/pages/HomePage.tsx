@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Users, MapPin, Phone, ExternalLink } from 'lucide-react';
+import { Search, MapPin, Phone, User, Shield, ArrowRight } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
-import toast from 'react-hot-toast';
+import { toast } from '@/components/ui/sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 interface Student {
@@ -22,16 +26,12 @@ interface Brigade {
 const HomePage: React.FC = () => {
   const [rollNumber, setRollNumber] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{
-    student: Student;
-    brigade: Brigade;
-  } | null>(null);
+  const [result, setResult] = useState<{ student: Student; brigade: Brigade } | null>(null);
   const { db } = useFirebase();
   const resultsRef = React.useRef<HTMLDivElement>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!rollNumber.trim()) {
       toast.error('Please enter your roll number');
       return;
@@ -42,11 +42,7 @@ const HomePage: React.FC = () => {
 
     try {
       const searchRollNumber = rollNumber.trim().toUpperCase();
-      
-      const studentQuery = query(
-        collection(db, 'students'),
-        where('stdroll', '==', searchRollNumber)
-      );
+      const studentQuery = query(collection(db, 'students'), where('stdroll', '==', searchRollNumber));
       const studentSnapshot = await getDocs(studentQuery);
 
       if (studentSnapshot.empty) {
@@ -56,17 +52,13 @@ const HomePage: React.FC = () => {
       }
 
       const studentData = studentSnapshot.docs[0].data() as Student;
-
       if (!studentData.stdbg) {
         toast.error('No brigade information available for this student');
         setLoading(false);
         return;
       }
 
-      const brigadeQuery = query(
-        collection(db, 'brigades'),
-        where('bnameno', '==', studentData.stdbg)
-      );
+      const brigadeQuery = query(collection(db, 'brigades'), where('bnameno', '==', studentData.stdbg));
       const brigadeSnapshot = await getDocs(brigadeQuery);
 
       if (brigadeSnapshot.empty) {
@@ -76,19 +68,11 @@ const HomePage: React.FC = () => {
       }
 
       const brigadeData = brigadeSnapshot.docs[0].data() as Brigade;
-
-      setResult({
-        student: studentData,
-        brigade: brigadeData
-      });
-
+      setResult({ student: studentData, brigade: brigadeData });
       toast.success('Brigade details found!');
-      
+
       setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -99,158 +83,136 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-12"
-      >
-        <div className="flex justify-center mb-6">
-          <div className="w-24 h-24 bg-primary-600 rounded-full flex items-center justify-center">
-            <Users className="w-12 h-12 text-white" />
-          </div>
-        </div>
-        <h1 className="text-4xl md:text-5xl font-bold font-montserrat text-gray-900 mb-4">
-          Brigade Venue Finder
-        </h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Enter your roll number to find your brigade details, venue location, and brigade lead contact information.
-        </p>
-      </motion.div>
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white">
+      {/* decorative background */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
+      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
 
-      {/* Search Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="max-w-md mx-auto mb-12"
-      >
-        <div className="card">
-          <form onSubmit={handleSearch} className="space-y-6">
-            <div>
-              <label htmlFor="rollNumber" className="block text-sm font-medium text-gray-700 mb-2">
-                Roll Number
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  id="rollNumber"
-                  value={rollNumber}
-                  onChange={(e) => setRollNumber(e.target.value)}
-                  placeholder="Enter your roll number (e.g., 15394)"
-                  className="input-field pl-10"
-                  disabled={loading}
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-primary flex items-center justify-center space-x-2 py-3"
-            >
-              {loading ? (
-                <LoadingSpinner size="sm" />
-              ) : (
-                <>
-                  <Search className="w-5 h-5" />
-                  <span>Find Brigade</span>
-                </>
-              )}
-            </button>
-          </form>
-        </div>
-      </motion.div>
-
-      {/* Results */}
-      {result && (
+      <div className="relative mx-auto max-w-3xl px-4 py-16 sm:py-24">
+        {/* Hero */}
         <motion.div
-          ref={resultsRef}
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <img src="/Ignite.png" alt="Ignite" className="mx-auto mb-5 h-14 w-auto sm:h-20" />
+          <Badge variant="secondary" className="mb-4">
+            Brigade Portal · 2026
+          </Badge>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
+            Find Your Brigade &amp; Venue
+          </h1>
+          <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground">
+            Enter your roll number to instantly see your brigade, venue location, and your brigade lead's contact
+            details.
+          </p>
+        </motion.div>
+
+        {/* Search */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-2xl mx-auto"
+          transition={{ delay: 0.15 }}
+          className="mx-auto mt-10 max-w-md"
         >
-          <div className="card">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-accent-600" />
-              </div>
-              <h2 className="text-2xl font-bold font-montserrat text-gray-900">
-                Your Brigade Details
-              </h2>
-            </div>
-
-            <div className="space-y-6">
-              {/* Student Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Student Information</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Name:</span>
-                    <span className="font-medium">{result.student.stdname}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Roll Number:</span>
-                    <span className="font-medium">{result.student.stdroll}</span>
-                  </div>
+          <Card className="shadow-xl shadow-slate-200/50">
+            <CardContent className="p-6">
+              <form onSubmit={handleSearch} className="space-y-4">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={rollNumber}
+                    onChange={(e) => setRollNumber(e.target.value)}
+                    placeholder="Enter your roll number (e.g., 15394)"
+                    className="h-12 pl-11 text-base"
+                    disabled={loading}
+                    autoFocus
+                  />
                 </div>
-              </div>
+                <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <LoadingSpinner size="sm" />
+                  ) : (
+                    <>
+                      <Search className="h-5 w-5" /> Find My Brigade
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-              {/* Brigade Info */}
-              <div className="bg-primary-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Brigade Information</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Brigade Number:</span>
-                    <span className="font-medium text-primary-700">{result.brigade.bnameno}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Brigade Lead:</span>
-                    <span className="font-medium">{result.brigade.blname}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Contact:</span>
-                    <a
-                      href={`tel:+91${result.brigade.blno}`}
-                      className="font-medium text-primary-600 hover:text-primary-700 flex items-center space-x-1"
-                    >
-                      <Phone className="w-4 h-4" />
-                      <span>{result.brigade.blno}</span>
-                    </a>
-                  </div>
-                  <div className="flex items-start justify-between">
-                    <span className="text-gray-600">Venue:</span>
-                    <div className="text-right">
-                      <div className="font-medium flex items-center space-x-1">
-                        <MapPin className="w-4 h-4 text-accent-600" />
-                        <span>{result.brigade.venue}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        {/* Results */}
+        {result && (
+          <motion.div
+            ref={resultsRef}
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mx-auto mt-8 max-w-md"
+          >
+            <Card className="overflow-hidden shadow-xl shadow-slate-200/50">
+              <div className="bg-primary px-6 py-5 text-primary-foreground">
+                <p className="text-sm/none opacity-80">Brigade assignment for</p>
+                <p className="mt-1 text-xl font-semibold">{result.student.stdname}</p>
+                <p className="text-sm opacity-80">Roll No. {result.student.stdroll}</p>
               </div>
+              <CardContent className="space-y-4 p-6">
+                <DetailRow icon={<Shield className="h-4 w-4" />} label="Brigade">
+                  <Badge>{result.brigade.bnameno}</Badge>
+                </DetailRow>
+                <DetailRow icon={<User className="h-4 w-4" />} label="Brigade Lead">
+                  <span className="font-medium">{result.brigade.blname}</span>
+                </DetailRow>
+                <DetailRow icon={<MapPin className="h-4 w-4 text-success" />} label="Venue">
+                  <span className="font-medium">{result.brigade.venue}</span>
+                </DetailRow>
 
-              {/* Contact Info */}
-              <div className="bg-accent-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-600 mb-2">
-                  For venue clarification, please contact:
-                </p>
                 <a
                   href={`tel:+91${result.brigade.blno}`}
-                  className="inline-flex items-center space-x-2 text-accent-600 hover:text-accent-700 font-medium"
+                  className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-4 transition-colors hover:bg-primary/10"
                 >
-                  <Phone className="w-4 h-4" />
-                  <span>{result.brigade.blno}</span>
-                  <ExternalLink className="w-4 h-4" />
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                      <Phone className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Call your brigade lead</p>
+                      <p className="font-semibold text-foreground">{result.brigade.blno}</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-primary" />
                 </a>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        <p className="mt-12 text-center text-xs text-muted-foreground">
+          Having trouble? Contact your brigade lead for venue clarification.
+        </p>
+      </div>
     </div>
   );
 };
+
+function DetailRow({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
+      <span className="flex items-center gap-2 text-sm text-muted-foreground">
+        {icon} {label}
+      </span>
+      {children}
+    </div>
+  );
+}
 
 export default HomePage;

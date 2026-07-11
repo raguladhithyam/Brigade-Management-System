@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Shield, Database, TrendingUp, Activity } from 'lucide-react';
-import { 
-  collection, 
-  getDocs, 
-  DocumentData, 
-  QueryDocumentSnapshot 
-} from 'firebase/firestore';
-import { useFirebase } from '../contexts/FirebaseContext';
-import Layout from '../components/Layout';
-import LoadingSpinner from '../components/LoadingSpinner';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-
-interface DashboardStats {
-  totalStudents: number;
-  totalBrigades: number;
-  recentUploads: number;
-  systemHealth: 'good' | 'warning' | 'error';
-}
+import { Link } from 'react-router-dom';
+import { Users, Shield, UserCog, BarChart3, ArrowRight, Layers } from 'lucide-react';
+import { collection, getCountFromServer, getDocs, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import Layout from '@/components/Layout';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 
 interface BrigadeChartData {
   brigade: string;
@@ -30,15 +31,10 @@ interface StudentData {
 }
 
 const AdminDashboard: React.FC = () => {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalStudents: 0,
-    totalBrigades: 0,
-    recentUploads: 0,
-    systemHealth: 'good'
-  });
   const [loading, setLoading] = useState(true);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [totalBrigades, setTotalBrigades] = useState(0);
   const [brigadeData, setBrigadeData] = useState<BrigadeChartData[]>([]);
-  const { db } = useFirebase();
 
   useEffect(() => {
     fetchDashboardData();
@@ -46,89 +42,64 @@ const AdminDashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch students count
+      const [studentCount, brigadeCount] = await Promise.all([
+        getCountFromServer(collection(db, 'students')),
+        getCountFromServer(collection(db, 'brigades')),
+      ]);
+      setTotalStudents(studentCount.data().count);
+      setTotalBrigades(brigadeCount.data().count);
+
+      // Distribution chart still needs per-student brigade data.
       const studentsSnapshot = await getDocs(collection(db, 'students'));
-      const totalStudents = studentsSnapshot.size;
-
-      // Fetch brigades count and data
-      const brigadesSnapshot = await getDocs(collection(db, 'brigades'));
-      const totalBrigades = brigadesSnapshot.size;
-
-      // Process brigade data for charts
-      const brigadeStats: { [key: string]: number } = {};
+      const brigadeStats: Record<string, number> = {};
       studentsSnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
         const student = doc.data() as StudentData;
-        if (student.stdbg) {
-          brigadeStats[student.stdbg] = (brigadeStats[student.stdbg] || 0) + 1;
-        }
+        if (student.stdbg) brigadeStats[student.stdbg] = (brigadeStats[student.stdbg] || 0) + 1;
       });
 
-      const chartData: BrigadeChartData[] = Object.entries(brigadeStats)
+      const chartData = Object.entries(brigadeStats)
         .map(([brigade, count]) => ({ brigade, students: count }))
         .sort((a, b) => b.students - a.students)
         .slice(0, 10);
-
       setBrigadeData(chartData);
-
-      setStats({
-        totalStudents,
-        totalBrigades,
-        recentUploads: Math.floor(Math.random() * 50) + 10, // Mock data
-        systemHealth: 'good'
-      });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      setStats(prev => ({ ...prev, systemHealth: 'error' }));
     } finally {
       setLoading(false);
     }
   };
 
+  const avgPerBrigade = totalBrigades > 0 ? Math.round(totalStudents / totalBrigades) : 0;
+
   const statCards = [
+    { title: 'Total Students', value: totalStudents, icon: Users, tone: 'text-primary', bg: 'bg-primary/10' },
+    { title: 'Total Brigades', value: totalBrigades, icon: Shield, tone: 'text-success', bg: 'bg-success/10' },
+    { title: 'Avg / Brigade', value: avgPerBrigade, icon: Layers, tone: 'text-violet-600', bg: 'bg-violet-100' },
     {
-      title: 'Total Students',
-      value: stats.totalStudents,
-      icon: Users,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-700'
+      title: 'Assigned Brigades',
+      value: brigadeData.length,
+      icon: BarChart3,
+      tone: 'text-amber-600',
+      bg: 'bg-amber-100',
     },
-    {
-      title: 'Total Brigades',
-      value: stats.totalBrigades,
-      icon: Shield,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-700'
-    },
-    {
-      title: 'Recent Activity',
-      value: stats.recentUploads,
-      icon: Activity,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-700'
-    },
-    {
-      title: 'System Health',
-      value: stats.systemHealth === 'good' ? 'Excellent' : 'Issues',
-      icon: TrendingUp,
-      color: stats.systemHealth === 'good' ? 'bg-emerald-500' : 'bg-red-500',
-      bgColor: stats.systemHealth === 'good' ? 'bg-emerald-50' : 'bg-red-50',
-      textColor: stats.systemHealth === 'good' ? 'text-emerald-700' : 'text-red-700'
-    }
   ];
 
   const pieData = [
-    { name: 'Active Students', value: stats.totalStudents, color: '#3B82F6' },
-    { name: 'Available Brigades', value: stats.totalBrigades, color: '#10B981' },
+    { name: 'Students', value: totalStudents, color: '#2563eb' },
+    { name: 'Brigades', value: totalBrigades, color: '#16a34a' },
+  ];
+
+  const quickActions = [
+    { to: '/admin/students', icon: Users, title: 'Manage Students', desc: 'View, add, edit & upload', bg: 'bg-primary/10', tone: 'text-primary' },
+    { to: '/admin/brigades', icon: Shield, title: 'Manage Brigades', desc: 'View, add, edit & upload', bg: 'bg-success/10', tone: 'text-success' },
+    { to: '/admin/users', icon: UserCog, title: 'User Management', desc: 'Admin accounts & access', bg: 'bg-violet-100', tone: 'text-violet-600' },
   ];
 
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-64">
-          <LoadingSpinner size="lg" text="Loading dashboard..." />
+        <div className="flex h-64 items-center justify-center">
+          <LoadingSpinner size="lg" text="Loading dashboard…" className="text-primary" />
         </div>
       </Layout>
     );
@@ -137,149 +108,126 @@ const AdminDashboard: React.FC = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h1 className="text-3xl font-bold font-montserrat text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-2">Welcome to the Ignite Brigade Management System</p>
+        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Overview of the Ignite Brigade Management System</p>
         </motion.div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
             return (
               <motion.div
                 key={stat.title}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className={`card ${stat.bgColor}`}
+                transition={{ delay: index * 0.06 }}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                    <p className={`text-2xl font-bold ${stat.textColor}`}>
-                      {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
-                    </p>
-                  </div>
-                  <div className={`p-3 rounded-full ${stat.color}`}>
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-                </div>
+                <Card>
+                  <CardContent className="flex items-center justify-between p-5">
+                    <div>
+                      <p className="text-sm text-muted-foreground">{stat.title}</p>
+                      <p className="mt-1 text-2xl font-bold text-foreground">{stat.value.toLocaleString()}</p>
+                    </div>
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${stat.bg}`}>
+                      <Icon className={`h-6 w-6 ${stat.tone}`} />
+                    </div>
+                  </CardContent>
+                </Card>
               </motion.div>
             );
           })}
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Bar Chart */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-            className="card"
-          >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Brigades by Student Count</h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={brigadeData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="brigade" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="students" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Top Brigades by Student Count</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                {brigadeData.length === 0 ? (
+                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                    No student assignments yet.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={brigadeData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="brigade" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
+                        cursor={{ fill: 'rgba(37,99,235,0.06)' }}
+                      />
+                      <Bar dataKey="students" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Pie Chart */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="card"
-          >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">System Overview</h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex justify-center space-x-4 mt-4">
-              {pieData.map((entry, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: entry.color }}
-                  />
-                  <span className="text-sm text-gray-600">{entry.name}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">System Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value">
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-2 flex justify-center gap-6">
+                {pieData.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                    <span className="text-sm text-muted-foreground">{entry.name}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="card"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a
-              href="/admin/students"
-              className="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <Users className="w-8 h-8 text-blue-600 mr-3" />
-              <div>
-                <h4 className="font-medium text-gray-900">Upload Students</h4>
-                <p className="text-sm text-gray-600">Add student data from Excel</p>
-              </div>
-            </a>
-            <a
-              href="/admin/brigades"
-              className="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-            >
-              <Shield className="w-8 h-8 text-green-600 mr-3" />
-              <div>
-                <h4 className="font-medium text-gray-900">Upload Brigades</h4>
-                <p className="text-sm text-gray-600">Add brigade information</p>
-              </div>
-            </a>
-            <a
-              href="/admin/data"
-              className="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-            >
-              <Database className="w-8 h-8 text-purple-600 mr-3" />
-              <div>
-                <h4 className="font-medium text-gray-900">Manage Data</h4>
-                <p className="text-sm text-gray-600">View and delete records</p>
-              </div>
-            </a>
-          </div>
-        </motion.div>
+        {/* Quick actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link
+                    key={action.to}
+                    to={action.to}
+                    className="group flex items-center gap-4 rounded-xl border border-border p-4 transition-colors hover:border-primary/40 hover:bg-accent"
+                  >
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${action.bg}`}>
+                      <Icon className={`h-6 w-6 ${action.tone}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-foreground">{action.title}</h4>
+                      <p className="text-sm text-muted-foreground">{action.desc}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                  </Link>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

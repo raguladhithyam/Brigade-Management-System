@@ -1,18 +1,17 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Shield, 
-  Database, 
+import {
+  LayoutDashboard,
+  Users,
+  Shield,
   LogOut,
   Menu,
-  UserPlus,
+  UserCog,
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import toast from 'react-hot-toast';
+import { toast } from '@/components/ui/sonner';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -36,14 +35,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-    { name: 'Upload Students', href: '/admin/students', icon: Users },
-    { name: 'Upload Brigades', href: '/admin/brigades', icon: Shield },
-    { name: 'Data Management', href: '/admin/data', icon: Database },
-    { name: 'Add Data Manually', href: '/admin/add-students-brigades', icon: UserPlus },
+    { name: 'Students', href: '/admin/students', icon: Users },
+    { name: 'Brigades', href: '/admin/brigades', icon: Shield },
+    { name: 'Users', href: '/admin/users', icon: UserCog },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/40">
       {/* Mobile sidebar */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -63,10 +61,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl lg:hidden"
             >
               <div className="flex items-center justify-between p-4 border-b">
-                <h2 className="text-xl font-bold font-montserrat text-gray-900">Admin Panel</h2>
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+                    <Shield className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <div className="leading-tight">
+                    <p className="text-sm font-bold text-foreground">Brigade Admin</p>
+                    <p className="text-xs text-muted-foreground">Ignite 2026</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setSidebarOpen(false)}
-                  className="p-2 rounded-lg hover:bg-gray-100"
+                  className="p-2 rounded-lg hover:bg-accent"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -74,7 +80,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <nav className="p-4 space-y-2">
                 {navigation.map((item) => {
                   const Icon = item.icon;
-                  const isActive = location.pathname === item.href;
+                  const isActive =
+                location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
                   return (
                     <Link
                       key={item.name}
@@ -82,8 +89,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       onClick={() => setSidebarOpen(false)}
                       className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isActive
-                          ? 'bg-primary-100 text-primary-700'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                       }`}
                     >
                       <Icon className="w-5 h-5 mr-3" />
@@ -93,7 +100,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 })}
                 <button
                   onClick={handleLogout}
-                  className="flex items-center w-full px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50"
+                  className="flex items-center w-full px-3 py-2 text-sm font-medium text-destructive rounded-lg hover:bg-destructive/10"
                 >
                   <LogOut className="w-5 h-5 mr-3" />
                   Logout
@@ -107,21 +114,28 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
-          <div className="flex items-center px-6 py-4 border-b">
-            <h2 className="text-xl font-bold font-montserrat text-gray-900">Admin Panel</h2>
+          <div className="flex items-center gap-2.5 px-6 py-4 border-b">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+              <Shield className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-bold text-foreground">Brigade Admin</p>
+              <p className="text-xs text-muted-foreground">Ignite 2026</p>
+            </div>
           </div>
           <nav className="flex-1 p-4 space-y-2">
             {navigation.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.href;
+              const isActive =
+                location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   }`}
                 >
                   <Icon className="w-5 h-5 mr-3" />
@@ -133,7 +147,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="p-4 border-t">
             <button
               onClick={handleLogout}
-              className="flex items-center w-full px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50"
+              className="flex items-center w-full px-3 py-2 text-sm font-medium text-destructive rounded-lg hover:bg-destructive/10"
             >
               <LogOut className="w-5 h-5 mr-3" />
               Logout
@@ -145,22 +159,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <div className="sticky top-0 z-30 bg-white border-b border-gray-200">
+        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-border">
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 lg:hidden"
+                className="p-2 rounded-lg hover:bg-accent lg:hidden"
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <span className="text-sm text-gray-600 font-medium ml-2 lg:ml-0">
+              <span className="text-sm text-muted-foreground font-medium ml-2 lg:ml-0">
                 Ignite Brigade Management System
               </span>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+              className="flex items-center px-3 py-2 text-sm font-medium text-destructive rounded-lg hover:bg-destructive/10 transition-colors"
             >
               <LogOut className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Logout</span>

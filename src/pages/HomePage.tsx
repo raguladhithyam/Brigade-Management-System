@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, MapPin, Shield } from 'lucide-react';
+import { Search, MapPin, Phone, User, Shield, ArrowRight } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { toast } from '@/components/ui/sonner';
@@ -178,16 +178,13 @@ const HomePage: React.FC = () => {
                 <DetailRow icon={<Shield className="h-4 w-4" />} label="Brigade">
                   <Badge>{result.brigade.bnameno}</Badge>
                 </DetailRow>
-                {/* Brigade Lead — hidden for now
                 <DetailRow icon={<User className="h-4 w-4" />} label="Brigade Lead">
                   <span className="font-medium">{result.brigade.blname}</span>
                 </DetailRow>
-                */}
                 <DetailRow icon={<MapPin className="h-4 w-4 text-success" />} label="Venue">
                   <span className="font-medium">{result.brigade.venue}</span>
                 </DetailRow>
 
-                {/* Call your brigade lead — hidden for now
                 <a
                   href={`tel:+91${result.brigade.blno}`}
                   className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-4 transition-colors hover:bg-primary/10"
@@ -203,7 +200,6 @@ const HomePage: React.FC = () => {
                   </div>
                   <ArrowRight className="h-4 w-4 text-primary" />
                 </a>
-                */}
               </CardContent>
             </Card>
           </motion.div>

@@ -1,101 +1,38 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { FirebaseProvider } from './contexts/FirebaseContext';
-import HomePage from './pages/HomePage';
-import AdminLogin from './pages/AdminLogin';
-import AdminDashboard from './pages/AdminDashboard';
-import StudentsPage from './pages/StudentsPage';
-import BrigadesPage from './pages/BrigadesPage';
-import StudentUpload from './pages/StudentUpload';
-import BrigadeUpload from './pages/BrigadeUpload';
-import UserManagement from './pages/UserManagement';
-import PopupManagement from './pages/PopupManagement';
-import NotFound from './pages/NotFound';
-import ProtectedRoute from './components/ProtectedRoute';
+import { useEffect } from 'react';
 
-function AdminIndexRedirect() {
-  const { currentUser } = useAuth();
-  return <Navigate to={currentUser ? '/admin/dashboard' : '/admin/login'} replace />;
-}
+// This site is retired. The Ignite Brigade Finder now lives at the URL below.
+// Every route (including /admin/*) permanently redirects there.
+const NEW_URL = 'https://ignite.kumaraguru.in/find-brigade';
 
 function App() {
+  useEffect(() => {
+    window.location.replace(NEW_URL);
+  }, []);
+
   return (
-    <FirebaseProvider>
-      <AuthProvider>
-        <Router>
-          <div className="min-h-screen bg-background">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/admin" element={<AdminIndexRedirect />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route
-                path="/admin/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/students"
-                element={
-                  <ProtectedRoute>
-                    <StudentsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/students/upload"
-                element={
-                  <ProtectedRoute>
-                    <StudentUpload />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/brigades"
-                element={
-                  <ProtectedRoute>
-                    <BrigadesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/brigades/upload"
-                element={
-                  <ProtectedRoute>
-                    <BrigadeUpload />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/users"
-                element={
-                  <ProtectedRoute>
-                    <UserManagement />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/popup"
-                element={
-                  <ProtectedRoute>
-                    <PopupManagement />
-                  </ProtectedRoute>
-                }
-              />
-              {/* Legacy paths → new locations */}
-              <Route path="/admin/data" element={<Navigate to="/admin/students" replace />} />
-              <Route path="/admin/add-students-brigades" element={<Navigate to="/admin/students" replace />} />
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster />
-          </div>
-        </Router>
-      </AuthProvider>
-    </FirebaseProvider>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'Poppins, sans-serif',
+        color: '#334155',
+        textAlign: 'center',
+        padding: '1.5rem',
+      }}
+    >
+      <div>
+        <p style={{ fontSize: '1.125rem', fontWeight: 600 }}>This site has moved.</p>
+        <p style={{ marginTop: '0.5rem', color: '#64748b' }}>
+          Redirecting you to{' '}
+          <a href={NEW_URL} style={{ color: '#2563eb' }}>
+            ignite.kumaraguru.in/find-brigade
+          </a>
+          …
+        </p>
+      </div>
+    </div>
   );
 }
 

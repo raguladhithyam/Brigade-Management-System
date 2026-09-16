@@ -1,9 +1,0 @@
-{
-  "redirects": [
-    {
-      "source": "/(.*)",
-      "destination": "https://ignite.kumaraguru.in/find-brigade",
-      "permanent": true
-    }
-  ]
-}

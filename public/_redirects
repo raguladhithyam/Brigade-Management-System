@@ -1,3 +1,0 @@
-# Netlify: retired site — permanent 301 redirect of every path to the new Ignite portal.
-# The trailing "!" forces the redirect even for paths that would otherwise resolve.
-/*  https://ignite.kumaraguru.in/find-brigade  301!
